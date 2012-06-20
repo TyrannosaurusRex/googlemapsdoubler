@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Maps City Comparison</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <style type="text/css">
+	
+    html, body{
+    margin: 0;
+    padding: 0;
+    height: 100%;
+		background-color: #cccccc;
+    }
+		#mapContainer{
+		width: 100%;
+		position: relative;
+		}
+		#search1{
+		position: absolute;
+		bottom: 15px;
+		left: 25%;
+		margin-left: -100px;
+		}
+		#input1, #input2{
+		width: 200px;
+		}
+		#search2{
+		position: absolute;
+		bottom: 15px;
+		right: 25%;
+		margin-right: -100px;
+		}
+		#container1{
+		width: 50%;
+		height: 100%;
+		position: relative;
+		overflow: hidden;
+		}
+	  #map_canvas1, #map_canvas2{
+		margin: 0;
+		padding: 0;
+		position: absolute;
+		top: 0;
+		height: 100%;
+		width: 100%;
+		overflow: hidden;
+	  }
+	   
+	   #map_canvas1 {
+	     z-index: 1;
+	   }
+	   #slider{
+	     width: 6px;
+	     height: 100%;
+	     position: absolute;
+	     background-color: #cccccc;
+	     left: 50%;
+	     margin-left: -3px;
+	     z-index: 2;
+	     cursor: e-resize; 
+	   }
+	   #sync{
+	     position: absolute;
+	     left: 50%;
+	     margin-left: -50px;
+	     text-align: center;
+	     width: 100px;
+	     bottom: 15px;
+	   }
+	   #nextsave{
+	     position: absolute;
+	     right: 30px;
+	     bottom: 15px;
+	   }
+	   #nameBox{
+	     position: absolute;
+	     right: 50%;
+	     top: 50px;
+	     z-index: 3;
+	     display: none;
+	     max-width: 400px;
+	     padding: 10px;
+	     background-color: #CCCCCC;
+	     text-align: left;
+	     font-family: helvetica, arial, sans-sarif;
+	     font-size: 11px;
+	     opacity:1;
+	     border-radius: 10px;
+	     transition:opacity 1s ease-out;
+	     -moz-transition:opacity 1s ease-out;
+	     -webkit-transition:opacity 1s ease-out;
+	   }
+	   #nameBox.fadeOut{
+	     opacity:0;
+	   }
+	   #nameContent{
+	     margin-top: 3px;
+	     text-align: center;
+	     font-size: 18px;
+	   }
+	   #tutorialBox{
+	     position: absolute;
+	     right: 50%;
+	     top: 40%;
+	     z-index: 3;
+	     padding: 10px;
+	     display: none;
+	     background-color: #CCCCCC;
+	     text-align: center;
+	     font-family: helvetica, arial, sans-sarif;
+	     font-size: 18px;
+	     max-width: 500px;
+	     opacity:1;
+	     border-radius: 10px;
+	     transition:opacity 1s ease-out;
+	     -moz-transition:opacity 1s ease-out;
+	     -webkit-transition:opacity 1s ease-out;	     
+	   }
+	   #tutorialBox.fadeOut{
+	     opacity:0;
+	   }
+	   #inputs{
+	     font-family: helvetica, arial, sans-sarif;
+	     font-size: 11px;
+	   }
+	   #tutorialContent{
+	     margin-top: 3px;
+	     text-align: left;
+	     font-size: 13px;
+	   }
+	   
+    </style>
+    <script type="text/javascript"
+        src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+
+    <script type="text/javascript">
+    var map1;
+	  var map2;
+	  var dragging = false;
+	  function locEqual(x, y){
+		return x.lat() == y.lat() && x.lng() == y.lng();
+	  }
+	  function resize(){
+		document.getElementById('mapContainer').style.height = (window.innerHeight - 50) + "px";
+		document.getElementById('map_canvas1').style.width = window.innerWidth + 'px';
+	  }
+	  function cookie(){
+	    document.cookie = "tutorialCheck=true";
+	  }
+	  function initialize() {
+	    resize();
+	    var mapOneLocation;
+			var mapOneZoom;
+			var mapTwoLocation;
+			var mapTwoZoom;
+			var name = window.location.href.match(/name=([^&]+)/);
+			var cookVal = document.cookie.split(";");
+			if(name){
+			  //console.log(name);
+			  name = decodeURIComponent(name[1]);
+			  name = name.replace(/</g,"&lt;");
+			  name = name.replace(/>/g,"&gt;");
+			  name = name.replace(/'/g,"&#39;");
+			  name = name.replace(/"/g,"&quot;");
+			  var nameBox = document.getElementById("nameBox");
+			  var nameContent = document.getElementById("nameContent");
+			  nameBox.style.display = 'block';
+			  nameContent.innerHTML = name;
+			  var width = nameBox.offsetWidth;
+			  nameBox.style.marginRight = (-width/2) + "px";
+			  setTimeout("document.getElementById('nameBox').className = 'fadeOut'",6000);
+			  setTimeout("document.getElementById('nameBox').style.display = 'none'",7000);
+			}
+			if(cookVal[0]!="tutorialCheck=true"){
+			  var tutorialBox = document.getElementById("tutorialBox");
+			  tutorialBox.style.display = 'block';
+			  var width = tutorialBox.offsetWidth;
+			  tutorialBox.style.marginRight = (-width/2) + "px";
+			  var close = document.getElementById("close");
+			  close.addEventListener('click', function(){
+			      if(document.getElementById("tutCheckBox").checked){
+			        cookie();
+			      }
+			      tutorialBox.className = 'fadeOut';
+			      setTimeout("document.getElementById('tutorialBox').style.display = 'none'",1000);
+			  });
+			  //cookie();
+			  //console.log(document.cookie);
+			}
+			if(window.location.href.match(/\.html$/)){
+			  document.getElementById("nextsave").style.display = 'none';
+			}
+		  var ll1 = window.location.href.match(/latlng1=([^&]+)/);
+		  if(!ll1){
+		    ll1 = [35.689649,139.691162];
+		  }else {
+		    ll1 = ll1[1].split(",");
+		  }
+		  var ll2 = window.location.href.match(/latlng2=([^&]+)/);
+		  if(!ll2){
+		    ll2 = [40.748297,-73.853874];
+		  }else {
+		    ll2 = ll2[1].split(",");
+		  }
+		  var z1 = window.location.href.match(/zoom1=([^&]+)/);
+		  if(!z1){
+		    z1 = 8;
+		  } else{
+		    z1 = z1[1];
+		  }
+		  var z2 = window.location.href.match(/zoom2=([^&]+)/);
+		  if(!z2){
+		    z2 = 8;
+		  } else{
+		    z2 = z2[1];
+		  }
+        var myOptions1 = {
+          zoom: parseInt(z1),
+          center: new google.maps.LatLng(ll1[0],ll1[1]),
+          mapTypeId: google.maps.MapTypeId.SATELLITE,
+          streetViewControl: false,
+          panControl: false
+        };
+		var myOptions2 = {
+          zoom: parseInt(z2),
+          center: new google.maps.LatLng(ll2[0],ll2[1]),
+          mapTypeId: google.maps.MapTypeId.SATELLITE,
+          streetViewControl: false,
+          panControl: false
+        };
+        map1 = new google.maps.Map(document.getElementById('map_canvas1'), myOptions1);
+        map2 = new google.maps.Map(document.getElementById('map_canvas2'), myOptions2);
+		document.getElementById('slider').addEventListener('mousedown', function(event){
+			dragging = true;
+			event.preventDefault();
+		}, false);
+		window.addEventListener('mouseup', function(){
+			dragging = false;
+		}, false);
+		window.addEventListener('mousemove', function(event){
+			var x = event.pageX;
+			if (dragging == true) {
+			  if(x<10){
+			    x = 10;
+			  }
+			  if(x>(window.innerWidth - 10)){
+			    x = window.innerWidth - 10;
+			  }
+			  document.getElementById('slider').style.left = x + 'px';
+			  document.getElementById('container1').style.width = x + 'px';
+			}
+		}, false);
+		
+		var oldLocation1 = map1.getCenter();
+		var oldZoom1 = map1.getZoom();
+		var oldLocation2 = map2.getCenter();
+		var oldZoom2 = map2.getZoom();
+		var diff = {
+			lat:oldLocation1.lat() - oldLocation2.lat(),
+			lng:oldLocation1.lng() - oldLocation2.lng()
+		};
+		window.addEventListener('resize', resize, false);
+		document.getElementById('search1').addEventListener('submit', function(e){
+			e.preventDefault();
+			var input = document.getElementById('input1').value;
+			var geocoder = new google.maps.Geocoder();
+			var request = {
+			address:input
+			};
+			geocoder.geocode(request,function(results){
+			console.log(arguments);
+			mapOneLocation = results[0].geometry.location;
+			oldLocation1 = mapOneLocation;
+			diff = {
+				lat:oldLocation1.lat() - oldLocation2.lat(),
+				lng:oldLocation1.lng() - oldLocation2.lng()
+			}
+			map1.setCenter(mapOneLocation);
+			});
+		}, false);
+		document.getElementById('search2').addEventListener('submit', function(e){
+			e.preventDefault();
+			var input = document.getElementById('input2').value;
+			var geocoder = new google.maps.Geocoder();
+			var request = {
+			address:input
+			};
+			geocoder.geocode(request,function(results){
+			console.log(arguments);
+			mapTwoLocation = results[0].geometry.location;
+			oldLocation2 = mapTwoLocation;
+			diff = {
+				lat:oldLocation1.lat() - oldLocation2.lat(),
+				lng:oldLocation1.lng() - oldLocation2.lng()
+			}
+			map2.setCenter(mapTwoLocation);
+			});
+		}, false);
+		setInterval(function(){
+			mapOneLocation = map1.getCenter();
+			mapOneZoom = map1.getZoom();
+			mapTwoLocation = map2.getCenter();
+			mapTwoZoom = map2.getZoom();
+			if(document.getElementById("checkbox").checked){
+			  if(diff==null){
+			    diff = {
+			      lat:mapOneLocation.lat() - mapTwoLocation.lat(),
+			      lng:mapOneLocation.lng() - mapTwoLocation.lng()
+			    }
+			  }
+        if(!locEqual(mapOneLocation, oldLocation1)){
+          mapTwoLocation = new google.maps.LatLng(
+            mapOneLocation.lat() - diff.lat,
+            mapOneLocation.lng() - diff.lng
+          );
+          map2.setCenter(mapTwoLocation);
+          oldLocation1 = mapOneLocation;
+        } else if(!locEqual(mapTwoLocation, oldLocation2)&&document.getElementById("checkbox").checked){
+          mapOneLocation = new google.maps.LatLng(
+            mapTwoLocation.lat() + diff.lat,
+            mapTwoLocation.lng() + diff.lng
+          );
+          map1.setCenter(mapOneLocation);
+          oldLocation1 = mapOneLocation;
+        } else {
+          diff = null;
+        }
+			}
+			if(mapOneZoom != oldZoom1){
+				map2.setZoom(mapOneZoom);
+				oldZoom1 = mapOneZoom;
+			} else if(mapTwoZoom != oldZoom2){
+				map1.setZoom(mapTwoZoom);
+				oldZoom1 = mapTwoZoom;
+			}
+			oldLocation2 = mapTwoLocation;
+			oldZoom2 = mapTwoZoom;
+		},1);
+		  if(!location.href.match(/\.html$/)){
+		  var save = document.getElementById("save");
+		  save.addEventListener('click', function(){
+		      var url="?latlng1=" + mapOneLocation.lat() + "," + mapOneLocation.lng() + 
+		              "&latlng2=" + mapTwoLocation.lat() + "," + mapTwoLocation.lng() + 
+		              "&zoom1=" + mapOneZoom + "&zoom2=" + mapTwoZoom +
+		              "&save=1";
+		      var name = prompt("Please enter a name for your entry.");
+		      url += "&name=" + encodeURIComponent(name);
+
+		      if(!name){
+		        return;
+		      }
+		      window.location = url;
+		  });
+		  var next = document.getElementById("next");
+		  next.addEventListener('click', function(){
+		      window.location = "?random=1";
+		  });
+		  }
+		}
+
+      google.maps.event.addDomListener(window, 'load', initialize);
+	  
+
+    </script>
+  </head>
+  <body>
+  <div id="nameBox">
+  You are currently viewing: <div id = "nameContent"></div>
+  </div>
+  <div id="tutorialBox">Google Maps Doubler Tips: <div id="tutorialContent">
+  <ul>
+  <li>On each side of the screen is an instance of Google Maps</li>
+  <li>You can enter a search term for each instance by typing it into the corresponding search box</li>
+  <li>You can move around on either map (with the arrow keys or mouse) and the other will keep its relative position and zoom level (uncheck the 'sync' box to disable this behavior)</li>
+  <li>You can drag the dividing bar to adjust how much of either map is viewed</li>
+  <li>The 'save' button saves both map locations to a database as a pair, and the 'next' button displays one of these pairs at random</li>
+  </ul>
+  </div>
+  <div id="inputs">
+  <label><input id="tutCheckBox" type="checkbox" checked="checked">Do not show this again</label>
+  <button id="close">close</button>
+  </div></div>
+  <div id="mapContainer">
+  <div id="slider"></div>
+  <div id="container1">
+  <div id="map_canvas1"></div>
+	</div>
+	<div id="map_canvas2"></div>
+  </div>
+  <form id="search1">
+	<input type="text" id="input1" placeholder="Enter location for left map">
+  </form>
+  <form id="search2">
+	<input type="text" id="input2" placeholder="Enter location for right map">
+  </form>
+  <form id="sync">
+  <label><input id="checkbox" type="checkbox" checked="checked"> Sync</label>
+  </form>
+  <div id="nextsave">
+  <button id="save">save</button>
+  <button id="next">next</button>
+  </div>
+  </body>
+</html>
